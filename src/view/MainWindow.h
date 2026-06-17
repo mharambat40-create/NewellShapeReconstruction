@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "controller/ApplicationState.h"
+
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -17,7 +19,11 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+private slots:
+    void importPointCloud();
+
 private:
     Ui::MainWindow *ui;
+    ApplicationState applicationState_;
 };
 #endif // MAINWINDOW_H

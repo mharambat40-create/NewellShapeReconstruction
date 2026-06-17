@@ -12,12 +12,11 @@ The repository now has:
 
 What is still missing:
 
-- geometry data structures;
-- import/export services;
 - smoothing and fitting algorithms;
 - evaluation metrics;
 - viewport and visual comparison tools;
 - OCCT or other geometry-processing dependencies.
+- richer geometry formats beyond ASCII PLY.
 
 ## Phase 1: Foundation slice
 
@@ -32,6 +31,10 @@ Deliverables:
 - Root `CMakeLists.txt` using C++20
 - Basic `src/model/geometry` types
 - Initial controller skeleton
+
+Status:
+
+- Completed for the first import-oriented slice.
 
 ## Phase 2: Import and data preservation
 
@@ -49,6 +52,11 @@ Deliverables:
 - `src/model/io` import service
 - Internal point cloud representation
 - Explicit units and tolerance handling
+
+Status:
+
+- Initial ASCII `.ply` point-cloud import is implemented.
+- Original and current geometry are preserved through `GeometryDocument`.
 
 ## Phase 3: Initial visualisation
 
@@ -123,10 +131,10 @@ Deliverables:
 
 ## Recommended next implementation step
 
-Add the first vertical slice:
+Add the next vertical slice:
 
-1. Create internal geometry types in `src/model/geometry`.
-2. Add a `.ply` import service in `src/model/io`.
-3. Introduce a controller-owned document or scene state that can pass imported geometry to the view.
+1. Introduce a basic viewport placeholder or scene summary panel.
+2. Surface imported geometry metadata in the UI beyond the status bar.
+3. Add pre-processing hooks and document-level result history without implementing smoothing yet.
 
-That step turns the current shell into the first real application workflow without forcing premature dependency choices.
+That step builds on the import slice without jumping prematurely into OCCT or full visualisation.

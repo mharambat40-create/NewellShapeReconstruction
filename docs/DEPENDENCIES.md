@@ -8,10 +8,10 @@ Currently integrated:
 - Qt 6 Widgets
 - CMake
 - C++20 through the root build configuration
+- Eigen through the `NewellCore` target configuration
 
 Not yet integrated:
 
-- Eigen
 - OpenMesh
 - libigl
 - CGAL
@@ -27,7 +27,10 @@ It currently:
 - defines the `Newell` project;
 - enforces C++20;
 - locates Qt 6.5 Core and Widgets;
-- builds the application from `src/app` and `src/view`.
+- prefers `find_package(Eigen3)` and falls back to common Homebrew include paths;
+- builds the application from `src/app` and `src/view`;
+- builds a Qt-free `NewellCore` library for model and controller code;
+- adds a small `NewellTests` executable.
 
 ## Primary technologies
 
@@ -78,7 +81,8 @@ Role:
 
 Current status:
 
-- Planned as the first non-Qt external dependency
+- Required by the first import-oriented slice
+- Linked through `Eigen3::Eigen`
 
 ## Candidate future geometry libraries
 

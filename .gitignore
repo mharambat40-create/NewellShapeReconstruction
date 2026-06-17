@@ -81,4 +81,9 @@ CMakeLists.txt.user*
 .rcc/
 .uic/
 /build*/
+/CMakeFiles/
+/CMakeCache.txt
+/CTestTestfile.cmake
+/cmake_install.cmake
+/Testing/
 /.qtcreator/

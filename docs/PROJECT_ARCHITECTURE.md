@@ -38,7 +38,14 @@ The repository now contains a buildable Qt 6 Widgets shell organised at the repo
     └── sample_geometry/
 ```
 
-Only the application shell and view entry point are implemented so far. The module directories under `model/`, `controller/` and `infrastructure/` are placeholders for the next implementation steps.
+The first vertical slice is now implemented:
+
+- ASCII PLY import in `src/model/io`
+- `Point3d`, `PointCloud` and `GeometryDocument` in `src/model/geometry`
+- controller-owned document state in `src/controller`
+- a Qt import action in `src/view`
+
+Smoothing, fitting, CAD reconstruction and visualisation are still future work.
 
 ## Processing workflow
 
@@ -96,7 +103,13 @@ Rules:
 
 The Controller layer connects user actions to application logic and state.
 
-Planned responsibilities:
+Current responsibilities:
+
+- load an ASCII PLY file into a `GeometryDocument`
+- preserve original and current geometry states
+- expose basic loaded status and point count
+
+Future responsibilities:
 
 - Import commands
 - Smoothing commands
@@ -116,11 +129,24 @@ Current file:
 
 - `main.cpp`
 
+Current interaction:
+
+- launches the Qt shell that can trigger an ASCII PLY import
+
 ### `src/model/geometry`
 
-Planned home for:
+Current content:
 
-- Point clouds
+- `Point3d`
+- `PointCloud`
+- `GeometryDocument`
+
+Current responsibility:
+
+- preserve both original and current point-cloud state so future smoothing can modify the current geometry without destroying the imported reference
+
+Future additions:
+
 - Meshes
 - CAD wrappers
 - Bounding boxes, units and tolerances
@@ -128,7 +154,18 @@ Planned home for:
 
 ### `src/model/io`
 
-Planned home for:
+Current content:
+
+- ASCII `.ply` point-cloud importer
+
+Current responsibility:
+
+- read ASCII PLY headers
+- parse vertex count
+- read x, y, z coordinates
+- reject binary PLY files and malformed input with clear errors
+
+Future additions:
 
 - Geometry import
 - Geometry export
