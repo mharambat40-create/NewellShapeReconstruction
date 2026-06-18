@@ -12,6 +12,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 class PointCloudViewport;
+class FloatingWorkflowMenu;
 
 class MainWindow : public QMainWindow
 {
@@ -21,12 +22,19 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+
 private slots:
     void importPointCloud();
+    void showPlaceholderFeatureMessage(const QString &featureName);
 
 private:
+    void positionOverlayMenu();
+
     Ui::MainWindow *ui;
     ApplicationState applicationState_;
     PointCloudViewport *viewport_ = nullptr;
+    FloatingWorkflowMenu *workflowMenu_ = nullptr;
 };
 #endif // MAINWINDOW_H
