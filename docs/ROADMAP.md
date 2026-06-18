@@ -14,7 +14,7 @@ What is still missing:
 
 - smoothing and fitting algorithms;
 - evaluation metrics;
-- viewport and visual comparison tools;
+- visual comparison tools beyond the initial viewport;
 - OCCT or other geometry-processing dependencies.
 - richer geometry formats beyond ASCII PLY.
 
@@ -35,6 +35,7 @@ Deliverables:
 Status:
 
 - Completed for the first import-oriented slice.
+- Extended with a basic point-cloud viewport and camera controls.
 
 ## Phase 2: Import and data preservation
 
@@ -57,6 +58,7 @@ Status:
 
 - Initial ASCII `.ply` point-cloud import is implemented.
 - Original and current geometry are preserved through `GeometryDocument`.
+- Imported point clouds can now be rendered in a Qt OpenGL viewport for inspection.
 
 ## Phase 3: Initial visualisation
 
@@ -133,8 +135,8 @@ Deliverables:
 
 Add the next vertical slice:
 
-1. Introduce a basic viewport placeholder or scene summary panel.
-2. Surface imported geometry metadata in the UI beyond the status bar.
+1. Surface imported geometry metadata in the UI beyond the status bar.
+2. Add scene overlays such as axes, bounds or point-cloud statistics.
 3. Add pre-processing hooks and document-level result history without implementing smoothing yet.
 
 That step builds on the import slice without jumping prematurely into OCCT or full visualisation.

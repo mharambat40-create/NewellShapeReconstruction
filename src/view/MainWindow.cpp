@@ -1,4 +1,5 @@
 #include "view/MainWindow.h"
+#include "view/PointCloudViewport.h"
 #include "ui_mainwindow.h"
 
 #include <QAction>
@@ -6,12 +7,19 @@
 #include <QMessageBox>
 #include <QStatusBar>
 #include <QString>
+#include <QVBoxLayout>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    auto *layout = new QVBoxLayout(ui->centralwidget);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    viewport_ = new PointCloudViewport(ui->centralwidget);
+    layout->addWidget(viewport_);
+
     connect(ui->actionImportPointCloud, &QAction::triggered, this, &MainWindow::importPointCloud);
     statusBar()->showMessage("No geometry loaded");
 }
@@ -46,6 +54,7 @@ void MainWindow::importPointCloud()
     }
 
     const QString successMessage = QString("Loaded %1 point(s)").arg(result.pointCount);
+    viewport_->setPointCloud(applicationState_.currentPointCloud());
     QMessageBox::information(this, "Import successful", successMessage);
     statusBar()->showMessage(successMessage);
 }

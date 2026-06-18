@@ -11,6 +11,8 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+class PointCloudViewport;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -25,5 +27,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     ApplicationState applicationState_;
+    PointCloudViewport *viewport_ = nullptr;
 };
 #endif // MAINWINDOW_H

@@ -45,7 +45,13 @@ The first vertical slice is now implemented:
 - controller-owned document state in `src/controller`
 - a Qt import action in `src/view`
 
-Smoothing, fitting, CAD reconstruction and visualisation are still future work.
+The second vertical slice now extends that flow with basic point-cloud visualisation:
+
+- `BoundingBox3d` in `src/model/geometry`
+- `PointCloudViewport` in `src/view`
+- basic mouse rotation, zoom and pan for imported point clouds
+
+Smoothing, fitting and CAD reconstruction are still future work.
 
 ## Processing workflow
 
@@ -86,6 +92,8 @@ Current content:
 - `src/view/MainWindow.cpp`
 - `src/view/MainWindow.h`
 - `src/view/MainWindow.ui`
+- `src/view/PointCloudViewport.cpp`
+- `src/view/PointCloudViewport.h`
 
 Future responsibilities:
 
@@ -98,6 +106,7 @@ Future responsibilities:
 Rules:
 
 - The View must not contain smoothing, fitting or evaluation logic.
+- Rendering and camera interaction may live in the View, but geometry analysis utilities must remain in the Model.
 
 ### Controller
 
@@ -132,6 +141,7 @@ Current file:
 Current interaction:
 
 - launches the Qt shell that can trigger an ASCII PLY import
+- configures the OpenGL surface format for the point-cloud viewport
 
 ### `src/model/geometry`
 
@@ -144,6 +154,7 @@ Current content:
 Current responsibility:
 
 - preserve both original and current point-cloud state so future smoothing can modify the current geometry without destroying the imported reference
+- compute non-UI geometry helpers such as point-cloud bounding boxes for view fitting
 
 Future additions:
 

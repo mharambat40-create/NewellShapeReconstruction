@@ -26,6 +26,11 @@ std::size_t ApplicationState::currentPointCount() const
     return document_.currentPointCount();
 }
 
+const PointCloud *ApplicationState::currentPointCloud() const
+{
+    return document_.currentPointCloud();
+}
+
 const GeometryDocument &ApplicationState::document() const
 {
     return document_;

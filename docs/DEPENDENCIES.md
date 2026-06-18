@@ -6,6 +6,8 @@ Currently integrated:
 
 - Qt 6 Core
 - Qt 6 Widgets
+- Qt 6 OpenGL
+- Qt 6 OpenGLWidgets
 - CMake
 - C++20 through the root build configuration
 - Eigen through the `NewellCore` target configuration
@@ -30,6 +32,7 @@ It currently:
 - prefers `find_package(Eigen3)` and falls back to common Homebrew include paths;
 - builds the application from `src/app` and `src/view`;
 - builds a Qt-free `NewellCore` library for model and controller code;
+- links Qt OpenGL modules for the point-cloud viewport;
 - adds a small `NewellTests` executable.
 
 ## Primary technologies
@@ -46,6 +49,7 @@ Role:
 Current status:
 
 - Integrated
+- Used for `QOpenGLWidget`-based point-cloud rendering in the View layer
 
 ### C++20
 

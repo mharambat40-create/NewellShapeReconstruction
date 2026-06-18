@@ -29,3 +29,17 @@ const PointCloud::Container &PointCloud::points() const
 {
     return points_;
 }
+
+std::optional<BoundingBox3d> PointCloud::boundingBox() const
+{
+    if (points_.empty()) {
+        return std::nullopt;
+    }
+
+    BoundingBox3d boundingBox;
+    for (const Point3d &point : points_) {
+        boundingBox.expandToInclude(point);
+    }
+
+    return boundingBox;
+}

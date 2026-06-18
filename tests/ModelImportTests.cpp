@@ -1,9 +1,11 @@
+#include "model/geometry/BoundingBox3d.h"
 #include "model/geometry/PointCloud.h"
 #include "model/io/PlyPointCloudImporter.h"
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -56,6 +58,25 @@ void testAsciiPlyImport()
     require(result.success(), "ASCII PLY import should succeed.");
     require(result.pointCloud->pointCount() == 3U, "Imported point count should be 3.");
 }
+
+void testBoundingBox()
+{
+    PointCloud pointCloud;
+    require(!pointCloud.boundingBox().has_value(), "Empty point clouds should not produce a bounding box.");
+
+    pointCloud.addPoint(-1.0, 2.0, 0.5);
+    pointCloud.addPoint(3.0, -4.0, 7.5);
+    pointCloud.addPoint(2.0, 1.0, -2.0);
+
+    const std::optional<BoundingBox3d> boundingBox = pointCloud.boundingBox();
+    require(boundingBox.has_value(), "Bounding box should exist for non-empty clouds.");
+    require(boundingBox->minPoint().x() == -1.0, "Bounding box min x should match.");
+    require(boundingBox->minPoint().y() == -4.0, "Bounding box min y should match.");
+    require(boundingBox->minPoint().z() == -2.0, "Bounding box min z should match.");
+    require(boundingBox->maxPoint().x() == 3.0, "Bounding box max x should match.");
+    require(boundingBox->maxPoint().y() == 2.0, "Bounding box max y should match.");
+    require(boundingBox->maxPoint().z() == 7.5, "Bounding box max z should match.");
+}
 }
 
 int main()
@@ -63,6 +84,7 @@ int main()
     try {
         testPointCloudBasics();
         testAsciiPlyImport();
+        testBoundingBox();
     } catch (const std::exception &exception) {
         std::cerr << "Test failure: " << exception.what() << '\n';
         return 1;

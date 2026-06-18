@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets)
 find_package(Eigen3 QUIET CONFIG)
 
 if (NOT Eigen3_FOUND)
@@ -40,6 +40,8 @@ qt_standard_project_setup()
 add_library(NewellCore STATIC
     src/controller/ApplicationState.cpp
     src/controller/ApplicationState.h
+    src/model/geometry/BoundingBox3d.cpp
+    src/model/geometry/BoundingBox3d.h
     src/model/geometry/GeometryDocument.cpp
     src/model/geometry/GeometryDocument.h
     src/model/geometry/Point3d.h
@@ -66,6 +68,8 @@ qt_add_executable(Newell
     src/view/MainWindow.cpp
     src/view/MainWindow.h
     src/view/MainWindow.ui
+    src/view/PointCloudViewport.cpp
+    src/view/PointCloudViewport.h
 )
 
 target_include_directories(Newell
@@ -77,6 +81,8 @@ target_link_libraries(Newell
     PRIVATE
         NewellCore
         Qt::Core
+        Qt::OpenGL
+        Qt::OpenGLWidgets
         Qt::Widgets
 )
 

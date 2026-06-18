@@ -21,6 +21,7 @@ public:
     [[nodiscard]] LoadPointCloudResult loadPointCloudFromFile(const std::filesystem::path &filePath);
     [[nodiscard]] bool hasGeometryLoaded() const;
     [[nodiscard]] std::size_t currentPointCount() const;
+    [[nodiscard]] const PointCloud *currentPointCloud() const;
     [[nodiscard]] const GeometryDocument &document() const;
 
 private:
