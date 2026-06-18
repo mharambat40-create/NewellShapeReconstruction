@@ -1,7 +1,13 @@
 #include "view/MainWindow.h"
 
 #include <QApplication>
+#include <QIcon>
 #include <QSurfaceFormat>
+
+namespace
+{
+constexpr auto kRuntimeIconPath = ":/icons/png/Newell_icon_app_tile_1024.png";
+}
 
 int main(int argc, char *argv[])
 {
@@ -12,7 +18,10 @@ int main(int argc, char *argv[])
     QSurfaceFormat::setDefaultFormat(format);
 
     QApplication a(argc, argv);
+    a.setWindowIcon(QIcon(QString::fromUtf8(kRuntimeIconPath)));
+
     MainWindow w;
+    w.setWindowIcon(QApplication::windowIcon());
     w.show();
     return QApplication::exec();
 }

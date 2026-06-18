@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>png/Newell_icon_app_tile_1024.png</file>
+    </qresource>
+</RCC>

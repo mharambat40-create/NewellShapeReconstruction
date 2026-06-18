@@ -37,6 +37,19 @@ endif()
 
 qt_standard_project_setup()
 
+set(NEWELL_MACOS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon/macos/Newell.icns")
+set(NEWELL_RUNTIME_ICONS_QRC "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon/newell_icons.qrc")
+
+if (APPLE)
+    set(MACOSX_BUNDLE_ICON_FILE "Newell.icns")
+
+    set_source_files_properties(
+        ${NEWELL_MACOS_ICON}
+        PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources"
+    )
+endif()
+
 add_library(NewellCore STATIC
     src/controller/ApplicationState.cpp
     src/controller/ApplicationState.h
@@ -64,6 +77,7 @@ target_link_libraries(NewellCore
 qt_add_executable(Newell
     WIN32
     MACOSX_BUNDLE
+    ${NEWELL_RUNTIME_ICONS_QRC}
     src/app/main.cpp
     src/view/MainWindow.cpp
     src/view/MainWindow.h
@@ -73,6 +87,15 @@ qt_add_executable(Newell
     src/view/PointCloudViewport.cpp
     src/view/PointCloudViewport.h
 )
+
+if (APPLE)
+    target_sources(Newell PRIVATE ${NEWELL_MACOS_ICON})
+
+    set_target_properties(Newell PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_ICON_FILE "Newell.icns"
+    )
+endif()
 
 target_include_directories(Newell
     PRIVATE
