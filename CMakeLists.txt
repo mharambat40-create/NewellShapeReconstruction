@@ -84,6 +84,8 @@ qt_add_executable(Newell
     src/view/MainWindow.ui
     src/view/FloatingWorkflowMenu.cpp
     src/view/FloatingWorkflowMenu.h
+    src/view/PreprocessingSideMenu.cpp
+    src/view/PreprocessingSideMenu.h
     src/view/PointCloudViewport.cpp
     src/view/PointCloudViewport.h
 )

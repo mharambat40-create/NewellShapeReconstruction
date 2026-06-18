@@ -1,5 +1,6 @@
 #include "view/FloatingWorkflowMenu.h"
 #include "view/MainWindow.h"
+#include "view/PreprocessingSideMenu.h"
 #include "view/PointCloudViewport.h"
 #include "ui_mainwindow.h"
 
@@ -80,14 +81,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     workflowMenu_ = new FloatingWorkflowMenu(ui->centralwidget);
     workflowMenu_->raise();
+    preprocessingSideMenu_ = new PreprocessingSideMenu(ui->centralwidget);
+    preprocessingSideMenu_->hideMenu();
 
     connect(ui->actionImportPointCloud, &QAction::triggered, this, &MainWindow::importPointCloud);
     connect(workflowMenu_, &FloatingWorkflowMenu::importRequested, this, &MainWindow::importPointCloud);
     connect(
         workflowMenu_,
-        &FloatingWorkflowMenu::placeholderRequested,
+        &FloatingWorkflowMenu::workflowStepSelected,
         this,
-        &MainWindow::showPlaceholderFeatureMessage);
+        &MainWindow::handleWorkflowStepSelection);
 
     positionOverlayMenu();
     statusBar()->showMessage("No geometry loaded");
@@ -149,8 +152,39 @@ void MainWindow::positionOverlayMenu()
     }
 
     workflowMenu_->adjustSize();
+    workflowMenu_->raise();
 
     const int x = (ui->centralwidget->width() - workflowMenu_->width()) / 2;
     const int y = 12;
     workflowMenu_->move(std::max(0, x), y);
+
+    if (!preprocessingSideMenu_) {
+        return;
+    }
+
+    preprocessingSideMenu_->adjustSize();
+    preprocessingSideMenu_->raise();
+
+    const int sideMenuX = ui->centralwidget->width() - preprocessingSideMenu_->width() - 16;
+    const int sideMenuY = workflowMenu_->geometry().bottom() + 12;
+    preprocessingSideMenu_->move(std::max(0, sideMenuX), sideMenuY);
+}
+
+void MainWindow::handleWorkflowStepSelection(const QString &stepName)
+{
+    if (stepName == "Pre-processing") {
+        workflowMenu_->setActiveWorkflowStep(stepName);
+        preprocessingSideMenu_->showOperationList();
+        positionOverlayMenu();
+        return;
+    }
+
+    workflowMenu_->setActiveWorkflowStep(QString());
+    preprocessingSideMenu_->hideMenu();
+
+    if (stepName == "Import") {
+        return;
+    }
+
+    showPlaceholderFeatureMessage(stepName);
 }
