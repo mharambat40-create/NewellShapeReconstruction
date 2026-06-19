@@ -12,6 +12,7 @@ class FloatingWorkflowMenu : public QWidget
 public:
     explicit FloatingWorkflowMenu(QWidget *parent = nullptr);
     void setActiveWorkflowStep(const QString &stepName);
+    void setInteractionEnabled(bool enabled);
 
 signals:
     void importRequested();

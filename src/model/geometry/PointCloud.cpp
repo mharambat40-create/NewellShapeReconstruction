@@ -15,6 +15,11 @@ void PointCloud::clear()
     points_.clear();
 }
 
+void PointCloud::reserve(std::size_t pointCapacity)
+{
+    points_.reserve(pointCapacity);
+}
+
 bool PointCloud::empty() const
 {
     return points_.empty();

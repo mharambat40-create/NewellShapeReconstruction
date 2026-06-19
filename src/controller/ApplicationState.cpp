@@ -1,5 +1,7 @@
 #include "controller/ApplicationState.h"
 
+#include "model/preprocessing/InvalidPointSelection.h"
+
 LoadPointCloudResult ApplicationState::loadPointCloudFromFile(const std::filesystem::path &filePath)
 {
     const PlyImportResult importResult = importer_.importFromFile(filePath);
@@ -16,6 +18,66 @@ LoadPointCloudResult ApplicationState::loadPointCloudFromFile(const std::filesys
     };
 }
 
+SparseSelectionResult ApplicationState::selectSparseCurrentPoints(
+    double radiusMax,
+    int minimumNeighbourCount) const
+{
+    const PointCloud *currentCloud = document_.currentPointCloud();
+    if (!currentCloud) {
+        return SparseSelectionResult{false, "No point cloud is loaded.", {}};
+    }
+
+    if (radiusMax <= 0.0) {
+        return SparseSelectionResult{false, "Radius max must be greater than zero.", {}};
+    }
+
+    if (minimumNeighbourCount < 0) {
+        return SparseSelectionResult{false, "Number of neighbours cannot be negative.", {}};
+    }
+
+    return SparseSelectionResult{
+        true,
+        {},
+        selectSparseRegionPoints(*currentCloud, radiusMax, minimumNeighbourCount),
+    };
+}
+
+RemovePointResult ApplicationState::removeCurrentPointIndices(
+    const std::vector<std::size_t> &selectedIndices)
+{
+    PointCloud *currentCloud = document_.currentPointCloud();
+    if (!currentCloud) {
+        return RemovePointResult{false, "No point cloud is loaded.", 0U, 0U};
+    }
+
+    if (selectedIndices.empty()) {
+        return RemovePointResult{
+            false,
+            "No points are currently selected.",
+            0U,
+            currentCloud->pointCount(),
+        };
+    }
+
+    const std::size_t previousCount = currentCloud->pointCount();
+    PointCloud filteredCloud = removePointIndices(*currentCloud, selectedIndices);
+    const std::size_t remainingCount = filteredCloud.pointCount();
+
+    document_.replaceCurrentPointCloud(std::move(filteredCloud));
+
+    return RemovePointResult{
+        true,
+        {},
+        previousCount - remainingCount,
+        remainingCount,
+    };
+}
+
+void ApplicationState::restoreCurrentPointCloud(const PointCloud &pointCloud)
+{
+    document_.replaceCurrentPointCloud(pointCloud);
+}
+
 bool ApplicationState::hasGeometryLoaded() const
 {
     return document_.hasPointCloud();
@@ -24,6 +86,11 @@ bool ApplicationState::hasGeometryLoaded() const
 std::size_t ApplicationState::currentPointCount() const
 {
     return document_.currentPointCount();
+}
+
+std::size_t ApplicationState::geometryRevision() const
+{
+    return document_.revision();
 }
 
 const PointCloud *ApplicationState::currentPointCloud() const

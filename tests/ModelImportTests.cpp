@@ -1,6 +1,7 @@
 #include "model/geometry/BoundingBox3d.h"
 #include "model/geometry/PointCloud.h"
 #include "model/io/PlyPointCloudImporter.h"
+#include "model/preprocessing/InvalidPointSelection.h"
 
 #include <filesystem>
 #include <fstream>
@@ -77,6 +78,66 @@ void testBoundingBox()
     require(boundingBox->maxPoint().y() == 2.0, "Bounding box max y should match.");
     require(boundingBox->maxPoint().z() == 7.5, "Bounding box max z should match.");
 }
+
+void testSparseSelection()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(0.3, 0.0, 0.0);
+    pointCloud.addPoint(0.0, 0.3, 0.0);
+    pointCloud.addPoint(10.0, 10.0, 10.0);
+
+    const std::vector<std::size_t> selectedIndices =
+        selectSparseRegionPoints(pointCloud, 0.5, 2);
+    require(selectedIndices.size() == 1U, "Exactly one sparse point should be selected.");
+    require(selectedIndices.front() == 3U, "The isolated point should be selected.");
+}
+
+void testSparseSelectionWithInvalidParameters()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+
+    require(
+        selectSparseRegionPoints(pointCloud, 0.0, 1).empty(),
+        "Zero radius should be handled safely.");
+    require(
+        selectSparseRegionPoints(pointCloud, 1.0, -1).empty(),
+        "Negative neighbour counts should be handled safely.");
+    require(
+        selectSparseRegionPoints(PointCloud{}, 1.0, 1).empty(),
+        "Empty point clouds should produce an empty selection.");
+}
+
+void testRemovePointIndices()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 0.0, 0.0);
+    pointCloud.addPoint(2.0, 0.0, 0.0);
+    pointCloud.addPoint(3.0, 0.0, 0.0);
+
+    const PointCloud filteredCloud = removePointIndices(pointCloud, {1U, 1U, 3U, 99U});
+    require(filteredCloud.pointCount() == 2U, "Duplicate and out-of-range indices should be ignored safely.");
+    require(filteredCloud.points()[0].x() == 0.0, "The first unselected point should be preserved.");
+    require(filteredCloud.points()[1].x() == 2.0, "The second unselected point should be preserved.");
+}
+
+void testPointCloudSnapshotRestore()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 1.0, 1.0);
+    pointCloud.addPoint(2.0, 2.0, 2.0);
+
+    const PointCloud snapshot = pointCloud;
+    pointCloud = removePointIndices(pointCloud, {1U});
+    require(pointCloud.pointCount() == 2U, "Removing points from the working cloud should change the count.");
+
+    pointCloud = snapshot;
+    require(pointCloud.pointCount() == 3U, "Restoring the snapshot should recover the original count.");
+    require(pointCloud.points()[1].x() == 1.0, "Restoring the snapshot should recover original coordinates.");
+}
 }
 
 int main()
@@ -85,6 +146,10 @@ int main()
         testPointCloudBasics();
         testAsciiPlyImport();
         testBoundingBox();
+        testSparseSelection();
+        testSparseSelectionWithInvalidParameters();
+        testRemovePointIndices();
+        testPointCloudSnapshotRestore();
     } catch (const std::exception &exception) {
         std::cerr << "Test failure: " << exception.what() << '\n';
         return 1;

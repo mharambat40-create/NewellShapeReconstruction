@@ -24,6 +24,7 @@ constexpr auto kButtonStyleTemplate = R"(
         border-radius: 8px;
         padding: 5px 12px;
         font-weight: 600;
+        font-size: 13px;
     }
 
     QPushButton[active="true"] {
@@ -104,6 +105,18 @@ void FloatingWorkflowMenu::setActiveWorkflowStep(const QString &stepName)
 {
     activeStepName_ = stepName;
     updateButtonStates();
+}
+
+void FloatingWorkflowMenu::setInteractionEnabled(bool enabled)
+{
+    for (QPushButton *button :
+         {importButton_,
+          preProcessingButton_,
+          surfaceSmoothingButton_,
+          parametricFittingButton_,
+          exportButton_}) {
+        button->setEnabled(enabled);
+    }
 }
 
 void FloatingWorkflowMenu::updateButtonStates()

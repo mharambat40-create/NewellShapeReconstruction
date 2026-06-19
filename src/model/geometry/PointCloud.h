@@ -16,6 +16,7 @@ public:
     void addPoint(const Point3d &point);
     void addPoint(double x, double y, double z);
     void clear();
+    void reserve(std::size_t pointCapacity);
 
     [[nodiscard]] bool empty() const;
     [[nodiscard]] std::size_t pointCount() const;

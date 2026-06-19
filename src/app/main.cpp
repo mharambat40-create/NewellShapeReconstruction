@@ -6,7 +6,7 @@
 
 namespace
 {
-constexpr auto kRuntimeIconPath = ":/icons/png/Newell_icon_app_tile_1024.png";
+constexpr auto kRuntimeIconPath = ":/icons/png/Newell_icon_transparent_1024.png";
 }
 
 int main(int argc, char *argv[])

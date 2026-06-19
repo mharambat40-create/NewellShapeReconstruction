@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets Concurrent)
 find_package(Eigen3 QUIET CONFIG)
 
 if (NOT Eigen3_FOUND)
@@ -62,6 +62,8 @@ add_library(NewellCore STATIC
     src/model/geometry/PointCloud.h
     src/model/io/PlyPointCloudImporter.cpp
     src/model/io/PlyPointCloudImporter.h
+    src/model/preprocessing/InvalidPointSelection.cpp
+    src/model/preprocessing/InvalidPointSelection.h
 )
 
 target_include_directories(NewellCore
@@ -108,6 +110,7 @@ target_link_libraries(Newell
     PRIVATE
         NewellCore
         Qt::Core
+        Qt::Concurrent
         Qt::OpenGL
         Qt::OpenGLWidgets
         Qt::Widgets
