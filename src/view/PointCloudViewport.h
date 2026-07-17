@@ -20,6 +20,7 @@
 
 class QKeyEvent;
 class PointCloud;
+class TriangleMesh;
 class PointCloudViewport : public QOpenGLWidget
 {
     Q_OBJECT
@@ -30,6 +31,8 @@ public:
 
     void setPointCloud(const PointCloud *pointCloud, bool fitView = true);
     void clearPointCloud();
+    void setTriangleMesh(const TriangleMesh *triangleMesh);
+    void clearTriangleMesh();
     void setSelectionModeEnabled(bool enabled);
     void setSelectedPointIndices(const std::vector<std::size_t> &selectedPointIndices);
     void setSelectionInteractionEnabled(bool enabled);
@@ -54,6 +57,7 @@ private:
     enum class InteractionMode
     {
         Idle,
+        PendingMacPanning,
         Orbiting,
         Panning,
         BoxSelecting,
@@ -62,18 +66,22 @@ private:
 
     void rebuildGeometry(const PointCloud *pointCloud);
     void rebuildSelectedGeometry();
+    void rebuildMeshGeometry(const TriangleMesh *triangleMesh);
     void rebuildAxisGeometry();
     void uploadPendingPointCloud();
     void uploadPendingSelectedPoints();
+    void uploadPendingMesh();
     void uploadPendingAxisGeometry();
     void drawAxis();
     void fitViewToPointCloud();
     void drawSelectionOverlay();
     void beginInteraction(InteractionMode mode, const QPoint &position);
+    void panCameraByScreenDelta(const QPoint &delta);
     void updateSelectionInteraction(const QPoint &position);
     void resetInteraction();
     [[nodiscard]] bool isSelectionInteractionActive() const;
     [[nodiscard]] bool selectionGesturePassedDragThreshold() const;
+    [[nodiscard]] bool panGesturePassedDragThreshold(const QPoint &position) const;
     [[nodiscard]] QRect normalizedSelectionRectangle() const;
     [[nodiscard]] std::vector<std::size_t> collectPointsInSelectionArea() const;
     [[nodiscard]] std::optional<QPointF> projectedScreenPoint(const Point3d &point) const;
@@ -97,25 +105,32 @@ private:
     std::vector<float> pointData_;
     std::vector<float> selectedPointData_;
     std::vector<float> axisData_;
+    std::vector<float> meshData_;
     std::size_t pointCount_ = 0;
     std::size_t selectedPointCount_ = 0;
+    std::size_t meshVertexCount_ = 0;
     std::vector<std::size_t> selectedPointIndices_;
 
     bool glInitialized_ = false;
     bool pointDataDirty_ = false;
     bool selectedPointDataDirty_ = false;
     bool axisDataDirty_ = false;
+    bool meshDataDirty_ = false;
     bool selectionModeEnabled_ = false;
     bool selectionInteractionEnabled_ = true;
+    bool panningCursorActive_ = false;
     InteractionMode interactionMode_ = InteractionMode::Idle;
 
     QOpenGLShaderProgram shaderProgram_;
+    QOpenGLShaderProgram meshShaderProgram_;
     QOpenGLBuffer vertexBuffer_{QOpenGLBuffer::VertexBuffer};
     QOpenGLBuffer selectedVertexBuffer_{QOpenGLBuffer::VertexBuffer};
     QOpenGLBuffer axisVertexBuffer_{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer meshVertexBuffer_{QOpenGLBuffer::VertexBuffer};
     QOpenGLVertexArrayObject vertexArrayObject_;
     QOpenGLVertexArrayObject selectedVertexArrayObject_;
     QOpenGLVertexArrayObject axisVertexArrayObject_;
+    QOpenGLVertexArrayObject meshVertexArrayObject_;
 
     QVector3D cloudCenter_{0.0f, 0.0f, 0.0f};
     float cloudRadius_ = 1.0f;
@@ -124,6 +139,7 @@ private:
     float zoomDistance_ = 3.0f;
     QVector3D panOffset_{0.0f, 0.0f, 0.0f};
     QPoint lastMousePosition_;
+    QPoint interactionStartPosition_;
     QPoint selectionStartPosition_;
     QPoint selectionCurrentPosition_;
 };

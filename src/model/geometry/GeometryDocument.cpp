@@ -6,6 +6,7 @@ void GeometryDocument::clear()
 {
     originalPointCloud_.reset();
     currentPointCloud_.reset();
+    clearReconstructedMeshes();
     bumpRevision();
 }
 
@@ -13,6 +14,7 @@ void GeometryDocument::setPointCloud(const PointCloud &pointCloud)
 {
     originalPointCloud_ = pointCloud;
     currentPointCloud_ = pointCloud;
+    clearReconstructedMeshes();
     bumpRevision();
 }
 
@@ -20,19 +22,43 @@ void GeometryDocument::setPointCloud(PointCloud &&pointCloud)
 {
     originalPointCloud_ = pointCloud;
     currentPointCloud_ = std::move(pointCloud);
+    clearReconstructedMeshes();
     bumpRevision();
 }
 
 void GeometryDocument::replaceCurrentPointCloud(const PointCloud &pointCloud)
 {
     currentPointCloud_ = pointCloud;
+    clearReconstructedMeshes();
     bumpRevision();
 }
 
 void GeometryDocument::replaceCurrentPointCloud(PointCloud &&pointCloud)
 {
     currentPointCloud_ = std::move(pointCloud);
+    clearReconstructedMeshes();
     bumpRevision();
+}
+
+void GeometryDocument::setTemporaryReconstructedMesh(TriangleMesh mesh)
+{
+    temporaryReconstructedMesh_ = std::move(mesh);
+}
+
+bool GeometryDocument::commitTemporaryReconstructedMesh()
+{
+    if (!temporaryReconstructedMesh_) {
+        return false;
+    }
+
+    committedReconstructedMesh_ = std::move(temporaryReconstructedMesh_);
+    temporaryReconstructedMesh_.reset();
+    return true;
+}
+
+void GeometryDocument::discardTemporaryReconstructedMesh()
+{
+    temporaryReconstructedMesh_.reset();
 }
 
 bool GeometryDocument::hasPointCloud() const
@@ -65,7 +91,36 @@ PointCloud *GeometryDocument::currentPointCloud()
     return currentPointCloud_ ? &(*currentPointCloud_) : nullptr;
 }
 
+bool GeometryDocument::hasTemporaryReconstructedMesh() const
+{
+    return temporaryReconstructedMesh_.has_value();
+}
+
+const TriangleMesh *GeometryDocument::temporaryReconstructedMesh() const
+{
+    return temporaryReconstructedMesh_ ? &(*temporaryReconstructedMesh_) : nullptr;
+}
+
+const TriangleMesh *GeometryDocument::committedReconstructedMesh() const
+{
+    return committedReconstructedMesh_ ? &(*committedReconstructedMesh_) : nullptr;
+}
+
+const TriangleMesh *GeometryDocument::displayedReconstructedMesh() const
+{
+    if (temporaryReconstructedMesh_) {
+        return &(*temporaryReconstructedMesh_);
+    }
+    return committedReconstructedMesh_ ? &(*committedReconstructedMesh_) : nullptr;
+}
+
 void GeometryDocument::bumpRevision()
 {
     ++revision_;
+}
+
+void GeometryDocument::clearReconstructedMeshes()
+{
+    committedReconstructedMesh_.reset();
+    temporaryReconstructedMesh_.reset();
 }
