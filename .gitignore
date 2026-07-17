@@ -87,3 +87,10 @@ CMakeLists.txt.user*
 /cmake_install.cmake
 /Testing/
 /.qtcreator/
+
+# Locally generated Doxygen files
+/Doxyfile
+/Doxyfile.bak
+/docs/html/
+/html/
+/latex/

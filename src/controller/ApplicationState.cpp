@@ -1,6 +1,9 @@
 #include "controller/ApplicationState.h"
 
+#include "model/preprocessing/DuplicatePointSelection.h"
 #include "model/preprocessing/InvalidPointSelection.h"
+
+#include <utility>
 
 LoadPointCloudResult ApplicationState::loadPointCloudFromFile(const std::filesystem::path &filePath)
 {
@@ -42,6 +45,39 @@ SparseSelectionResult ApplicationState::selectSparseCurrentPoints(
     };
 }
 
+SparseSelectionResult ApplicationState::selectPerfectDuplicateCurrentPoints() const
+{
+    const PointCloud *currentCloud = document_.currentPointCloud();
+    if (!currentCloud) {
+        return SparseSelectionResult{false, "No point cloud is loaded.", {}};
+    }
+
+    return SparseSelectionResult{
+        true,
+        {},
+        selectPerfectDuplicatePoints(*currentCloud),
+    };
+}
+
+SparseSelectionResult ApplicationState::selectNearDuplicateCurrentPoints(
+    double distanceThreshold) const
+{
+    const PointCloud *currentCloud = document_.currentPointCloud();
+    if (!currentCloud) {
+        return SparseSelectionResult{false, "No point cloud is loaded.", {}};
+    }
+
+    if (distanceThreshold <= 0.0) {
+        return SparseSelectionResult{false, "Distance threshold must be greater than zero.", {}};
+    }
+
+    return SparseSelectionResult{
+        true,
+        {},
+        selectNearDuplicatePoints(*currentCloud, distanceThreshold),
+    };
+}
+
 RemovePointResult ApplicationState::removeCurrentPointIndices(
     const std::vector<std::size_t> &selectedIndices)
 {
@@ -78,6 +114,21 @@ void ApplicationState::restoreCurrentPointCloud(const PointCloud &pointCloud)
     document_.replaceCurrentPointCloud(pointCloud);
 }
 
+void ApplicationState::setTemporaryReconstructedMesh(TriangleMesh mesh)
+{
+    document_.setTemporaryReconstructedMesh(std::move(mesh));
+}
+
+bool ApplicationState::commitTemporaryReconstructedMesh()
+{
+    return document_.commitTemporaryReconstructedMesh();
+}
+
+void ApplicationState::discardTemporaryReconstructedMesh()
+{
+    document_.discardTemporaryReconstructedMesh();
+}
+
 bool ApplicationState::hasGeometryLoaded() const
 {
     return document_.hasPointCloud();
@@ -96,6 +147,16 @@ std::size_t ApplicationState::geometryRevision() const
 const PointCloud *ApplicationState::currentPointCloud() const
 {
     return document_.currentPointCloud();
+}
+
+bool ApplicationState::hasTemporaryReconstructedMesh() const
+{
+    return document_.hasTemporaryReconstructedMesh();
+}
+
+const TriangleMesh *ApplicationState::displayedReconstructedMesh() const
+{
+    return document_.displayedReconstructedMesh();
 }
 
 const GeometryDocument &ApplicationState::document() const

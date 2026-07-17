@@ -84,6 +84,28 @@ Deliverables:
 
 - Pre-processing hooks
 - Initial Laplacian smoothing
+
+Current reconstruction foundation delivered alongside preprocessing:
+
+- Ball Pivoting and Greedy Projection point-cloud reconstruction;
+- Voxel field construction and standard Marching Cubes extraction;
+- bounded oriented-normal RBF backend;
+- optional CGAL-backed Delaunay and Alpha Shapes with PCA planarity checks and 2D/2.5D output;
+- central registry, method requirements, cancellation, progress and mesh diagnostics.
+
+Normal-estimation foundation now delivered and exposed:
+
+- fixed-radius, multi-scale and quadratic local normal estimation;
+- method-specific configuration, availability rules, confidence and diagnostics;
+- direct use by Ball Pivoting and Greedy Projection without claiming global orientation.
+
+Orientation and field-derived interfaces are reserved internally for later
+reintroduction. They are not shown in the Normal Selection dialog because the
+current document/controller does not persist existing normal fields, implicit
+fields or voxel scalar fields. Oriented-normal RBF and Screened Poisson remain
+unavailable in this workflow.
+
+Screened Poisson remains dependency-blocked, direct Marching Cubes requires scalar-field input, and NURBS/B-Spline work remains in Parametric Fitting.
 - Background execution for longer operations
 
 ## Phase 5: Evaluation and comparison
@@ -133,10 +155,7 @@ Deliverables:
 
 ## Recommended next implementation step
 
-Add the next vertical slice:
-
-1. Surface imported geometry metadata in the UI beyond the status bar.
-2. Add scene overlays such as axes, bounds or point-cloud statistics.
-3. Add pre-processing hooks and document-level result history without implementing smoothing yet.
-
-That step builds on the import slice without jumping prematurely into OCCT or full visualisation.
+Persist normal fields and scalar-field context in `GeometryDocument`, then add
+an explicit optional orientation stage separate from estimation. Only after
+that state exists should viewpoint, graph and field-derived methods return to
+the UI.

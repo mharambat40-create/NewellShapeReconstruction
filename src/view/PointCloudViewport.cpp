@@ -3,8 +3,12 @@
 #include "model/geometry/BoundingBox3d.h"
 #include "model/geometry/Point3d.h"
 #include "model/geometry/PointCloud.h"
+#include "model/geometry/TriangleMesh.h"
+
+#include <Eigen/Geometry>
 
 #include <QColor>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -40,6 +44,7 @@ const QColor kSelectionOverlayFillColor(36, 92, 230, 38);
 const QColor kSelectionOverlayStrokeColor(36, 92, 230, 180);
 const QVector3D kPointCloudColor(0.235f, 0.255f, 0.275f); // #3C4146
 const QVector3D kSelectedPointColor(0.851f, 0.122f, 0.122f); // #D91F1F
+const QVector3D kMeshColor(0.72f, 0.73f, 0.74f);
 
 const QVector3D kAxisXColor(0.851f, 0.122f, 0.122f); // #D91F1F
 const QVector3D kAxisYColor(0.122f, 0.678f, 0.180f); // #1FAD2E
@@ -105,6 +110,8 @@ PointCloudViewport::~PointCloudViewport()
     selectedVertexBuffer_.destroy();
     axisVertexArrayObject_.destroy();
     axisVertexBuffer_.destroy();
+    meshVertexArrayObject_.destroy();
+    meshVertexBuffer_.destroy();
     doneCurrent();
 }
 
@@ -128,6 +135,7 @@ void PointCloudViewport::clearPointCloud()
     selectedPointData_.clear();
     selectedPointIndices_.clear();
     selectedPointCount_ = 0;
+    rebuildMeshGeometry(nullptr);
     pointDataDirty_ = true;
     selectedPointDataDirty_ = true;
     cloudCenter_ = QVector3D(0.0f, 0.0f, 0.0f);
@@ -137,6 +145,18 @@ void PointCloudViewport::clearPointCloud()
     zoomDistance_ = 3.0f;
     panOffset_ = QVector3D(0.0f, 0.0f, 0.0f);
     rebuildAxisGeometry();
+    update();
+}
+
+void PointCloudViewport::setTriangleMesh(const TriangleMesh *triangleMesh)
+{
+    rebuildMeshGeometry(triangleMesh);
+    update();
+}
+
+void PointCloudViewport::clearTriangleMesh()
+{
+    rebuildMeshGeometry(nullptr);
     update();
 }
 
@@ -171,17 +191,46 @@ void PointCloudViewport::initializeGL()
 
     shaderProgram_.link();
 
+    meshShaderProgram_.addShaderFromSourceCode(
+        QOpenGLShader::Vertex,
+        R"(#version 330 core
+           layout(location = 0) in vec3 position;
+           layout(location = 1) in vec3 normal;
+           uniform mat4 u_mvp;
+           out vec3 v_normal;
+           void main()
+           {
+               gl_Position = u_mvp * vec4(position, 1.0);
+               v_normal = normal;
+           })");
+    meshShaderProgram_.addShaderFromSourceCode(
+        QOpenGLShader::Fragment,
+        R"(#version 330 core
+           in vec3 v_normal;
+           out vec4 fragColor;
+           uniform vec3 u_color;
+           void main()
+           {
+               vec3 lightDirection = normalize(vec3(0.35, -0.45, 0.82));
+               float diffuse = 0.32 + 0.68 * abs(dot(normalize(v_normal), lightDirection));
+               fragColor = vec4(u_color * diffuse, 1.0);
+           })");
+    meshShaderProgram_.link();
+
     vertexArrayObject_.create();
     vertexBuffer_.create();
     selectedVertexArrayObject_.create();
     selectedVertexBuffer_.create();
     axisVertexArrayObject_.create();
     axisVertexBuffer_.create();
+    meshVertexArrayObject_.create();
+    meshVertexBuffer_.create();
 
     glInitialized_ = true;
     pointDataDirty_ = true;
     selectedPointDataDirty_ = true;
     axisDataDirty_ = true;
+    meshDataDirty_ = true;
 }
 
 void PointCloudViewport::resizeGL(int width, int height)
@@ -208,36 +257,45 @@ void PointCloudViewport::paintGL()
     uploadPendingPointCloud();
     uploadPendingSelectedPoints();
     uploadPendingAxisGeometry();
+    uploadPendingMesh();
 
     shaderProgram_.bind();
     shaderProgram_.setUniformValue("u_mvp", modelViewProjectionMatrix());
     drawAxis();
     shaderProgram_.release();
 
-    if (pointCount_ == 0) {
-        return;
+    if (meshVertexCount_ > 0) {
+        meshShaderProgram_.bind();
+        meshShaderProgram_.setUniformValue("u_mvp", modelViewProjectionMatrix());
+        meshShaderProgram_.setUniformValue("u_color", kMeshColor);
+        meshVertexArrayObject_.bind();
+        gl->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(meshVertexCount_));
+        meshVertexArrayObject_.release();
+        meshShaderProgram_.release();
     }
 
-    shaderProgram_.bind();
-    shaderProgram_.setUniformValue("u_mvp", modelViewProjectionMatrix());
-    shaderProgram_.setUniformValue("u_pointSize", kDefaultPointSize);
-    shaderProgram_.setUniformValue("u_color", kPointCloudColor);
+    if (pointCount_ > 0) {
+        shaderProgram_.bind();
+        shaderProgram_.setUniformValue("u_mvp", modelViewProjectionMatrix());
+        shaderProgram_.setUniformValue("u_pointSize", kDefaultPointSize);
+        shaderProgram_.setUniformValue("u_color", kPointCloudColor);
 
-    vertexArrayObject_.bind();
-    gl->glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(pointCount_));
-    vertexArrayObject_.release();
-
-    if (selectedPointCount_ > 0) {
         gl->glDepthFunc(GL_LEQUAL);
-        shaderProgram_.setUniformValue("u_pointSize", kSelectedPointSize);
-        shaderProgram_.setUniformValue("u_color", kSelectedPointColor);
-        selectedVertexArrayObject_.bind();
-        gl->glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(selectedPointCount_));
-        selectedVertexArrayObject_.release();
+        vertexArrayObject_.bind();
+        gl->glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(pointCount_));
+        vertexArrayObject_.release();
+
+        if (selectedPointCount_ > 0) {
+            shaderProgram_.setUniformValue("u_pointSize", kSelectedPointSize);
+            shaderProgram_.setUniformValue("u_color", kSelectedPointColor);
+            selectedVertexArrayObject_.bind();
+            gl->glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(selectedPointCount_));
+            selectedVertexArrayObject_.release();
+        }
         gl->glDepthFunc(GL_LESS);
+        shaderProgram_.release();
     }
 
-    shaderProgram_.release();
     drawSelectionOverlay();
 }
 
@@ -292,6 +350,14 @@ void PointCloudViewport::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+#ifdef Q_OS_MACOS
+    if (event->button() == Qt::LeftButton) {
+        beginInteraction(InteractionMode::PendingMacPanning, event->pos());
+        event->accept();
+        return;
+    }
+#endif
+
     QOpenGLWidget::mousePressEvent(event);
 }
 
@@ -316,43 +382,25 @@ void PointCloudViewport::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    if (interactionMode_ == InteractionMode::Panning) {
-        const QVector3D worldUp(0.0f, 0.0f, 1.0f);
-        const QVector3D forward = computeForwardVector(yawDegrees_, pitchDegrees_).normalized();
-
-        QVector3D right = QVector3D::crossProduct(forward, worldUp);
-        if (right.lengthSquared() < 1.0e-6f) {
-            right = QVector3D(1.0f, 0.0f, 0.0f);
-        } else {
-            right.normalize();
+#ifdef Q_OS_MACOS
+    if (interactionMode_ == InteractionMode::PendingMacPanning) {
+        if (!panGesturePassedDragThreshold(event->pos())) {
+            event->accept();
+            return;
         }
 
-        QVector3D cameraUp = QVector3D::crossProduct(right, forward);
-        if (cameraUp.lengthSquared() < 1.0e-6f) {
-            cameraUp = worldUp;
-        } else {
-            cameraUp.normalize();
-        }
-
-        const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-        const float halfVerticalFovRadians = qDegreesToRadians(kVerticalFieldOfViewDegrees * 0.5f);
-        const float visibleHalfHeight = zoomDistance_ * std::tan(halfVerticalFovRadians);
-        const float visibleHalfWidth = visibleHalfHeight * aspectRatio;
-
-        const float worldUnitsPerPixelX = width() > 0
-            ? (2.0f * visibleHalfWidth / static_cast<float>(width()))
-            : 0.0f;
-        const float worldUnitsPerPixelY = height() > 0
-            ? (2.0f * visibleHalfHeight / static_cast<float>(height()))
-            : 0.0f;
-
-        panOffset_ +=
-            (-right * static_cast<float>(delta.x()) * worldUnitsPerPixelX +
-             cameraUp * static_cast<float>(delta.y()) * worldUnitsPerPixelY) *
-            kPanDirection;
-        rebuildAxisGeometry();
+        interactionMode_ = InteractionMode::Panning;
+        panningCursorActive_ = true;
+        setCursor(Qt::ClosedHandCursor);
+        panCameraByScreenDelta(event->pos() - interactionStartPosition_);
         event->accept();
-        update();
+        return;
+    }
+#endif
+
+    if (interactionMode_ == InteractionMode::Panning) {
+        panCameraByScreenDelta(delta);
+        event->accept();
         return;
     }
 
@@ -411,6 +459,16 @@ void PointCloudViewport::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
+#ifdef Q_OS_MACOS
+    if ((interactionMode_ == InteractionMode::PendingMacPanning ||
+         interactionMode_ == InteractionMode::Panning) &&
+        event->button() == Qt::LeftButton) {
+        resetInteraction();
+        event->accept();
+        return;
+    }
+#endif
+
     QOpenGLWidget::mouseReleaseEvent(event);
 }
 
@@ -457,6 +515,7 @@ void PointCloudViewport::beginInteraction(InteractionMode mode, const QPoint &po
 {
     interactionMode_ = mode;
     lastMousePosition_ = position;
+    interactionStartPosition_ = position;
     if (mode == InteractionMode::BoxSelecting ||
         mode == InteractionMode::BoxDeselecting) {
         selectionStartPosition_ = position;
@@ -464,6 +523,45 @@ void PointCloudViewport::beginInteraction(InteractionMode mode, const QPoint &po
     }
 
     grabMouse();
+    update();
+}
+
+void PointCloudViewport::panCameraByScreenDelta(const QPoint &delta)
+{
+    const QVector3D worldUp(0.0f, 0.0f, 1.0f);
+    const QVector3D forward = computeForwardVector(yawDegrees_, pitchDegrees_).normalized();
+
+    QVector3D right = QVector3D::crossProduct(forward, worldUp);
+    if (right.lengthSquared() < 1.0e-6f) {
+        right = QVector3D(1.0f, 0.0f, 0.0f);
+    } else {
+        right.normalize();
+    }
+
+    QVector3D cameraUp = QVector3D::crossProduct(right, forward);
+    if (cameraUp.lengthSquared() < 1.0e-6f) {
+        cameraUp = worldUp;
+    } else {
+        cameraUp.normalize();
+    }
+
+    const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
+    const float halfVerticalFovRadians = qDegreesToRadians(kVerticalFieldOfViewDegrees * 0.5f);
+    const float visibleHalfHeight = zoomDistance_ * std::tan(halfVerticalFovRadians);
+    const float visibleHalfWidth = visibleHalfHeight * aspectRatio;
+
+    const float worldUnitsPerPixelX = width() > 0
+        ? (2.0f * visibleHalfWidth / static_cast<float>(width()))
+        : 0.0f;
+    const float worldUnitsPerPixelY = height() > 0
+        ? (2.0f * visibleHalfHeight / static_cast<float>(height()))
+        : 0.0f;
+
+    panOffset_ +=
+        (-right * static_cast<float>(delta.x()) * worldUnitsPerPixelX +
+         cameraUp * static_cast<float>(delta.y()) * worldUnitsPerPixelY) *
+        kPanDirection;
+    rebuildAxisGeometry();
     update();
 }
 
@@ -476,6 +574,11 @@ void PointCloudViewport::updateSelectionInteraction(const QPoint &position)
 void PointCloudViewport::resetInteraction()
 {
     interactionMode_ = InteractionMode::Idle;
+
+    if (panningCursorActive_) {
+        unsetCursor();
+        panningCursorActive_ = false;
+    }
 
     if (QWidget::mouseGrabber() == this) {
         releaseMouse();
@@ -490,6 +593,11 @@ bool PointCloudViewport::selectionGesturePassedDragThreshold() const
             kSelectionClickThresholdPixels ||
         std::abs(selectionCurrentPosition_.y() - selectionStartPosition_.y()) >
             kSelectionClickThresholdPixels;
+}
+
+bool PointCloudViewport::panGesturePassedDragThreshold(const QPoint &position) const
+{
+    return (position - interactionStartPosition_).manhattanLength() >= QApplication::startDragDistance();
 }
 
 bool PointCloudViewport::isSelectionInteractionActive() const
@@ -543,6 +651,41 @@ void PointCloudViewport::rebuildSelectedGeometry()
 
     selectedPointCount_ = selectedPointData_.size() / 3U;
     selectedPointDataDirty_ = true;
+}
+
+void PointCloudViewport::rebuildMeshGeometry(const TriangleMesh *triangleMesh)
+{
+    meshData_.clear();
+    meshVertexCount_ = 0U;
+    if (!triangleMesh || triangleMesh->empty() || !triangleMesh->hasValidIndices()) {
+        meshDataDirty_ = true;
+        return;
+    }
+
+    meshData_.reserve(triangleMesh->triangleCount() * 18U);
+    for (const Triangle &triangle : triangleMesh->triangles()) {
+        const Point3d &first = triangleMesh->vertices()[triangle.vertexIndices[0]];
+        const Point3d &second = triangleMesh->vertices()[triangle.vertexIndices[1]];
+        const Point3d &third = triangleMesh->vertices()[triangle.vertexIndices[2]];
+        Eigen::Vector3d faceNormal =
+            (second.vector() - first.vector()).cross(third.vector() - first.vector());
+        if (faceNormal.squaredNorm() <= 1.0e-24) {
+            continue;
+        }
+        faceNormal.normalize();
+
+        for (const Point3d *vertex : {&first, &second, &third}) {
+            meshData_.push_back(static_cast<float>(vertex->x()));
+            meshData_.push_back(static_cast<float>(vertex->y()));
+            meshData_.push_back(static_cast<float>(vertex->z()));
+            meshData_.push_back(static_cast<float>(faceNormal.x()));
+            meshData_.push_back(static_cast<float>(faceNormal.y()));
+            meshData_.push_back(static_cast<float>(faceNormal.z()));
+        }
+    }
+
+    meshVertexCount_ = meshData_.size() / 6U;
+    meshDataDirty_ = true;
 }
 
 void PointCloudViewport::rebuildAxisGeometry()
@@ -627,6 +770,36 @@ void PointCloudViewport::uploadPendingAxisGeometry()
     axisVertexBuffer_.release();
     axisVertexArrayObject_.release();
     axisDataDirty_ = false;
+}
+
+void PointCloudViewport::uploadPendingMesh()
+{
+    if (!meshDataDirty_ || !glInitialized_) {
+        return;
+    }
+
+    auto *gl = context()->extraFunctions();
+    meshVertexArrayObject_.bind();
+    meshVertexBuffer_.bind();
+    meshVertexBuffer_.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    meshVertexBuffer_.allocate(meshData_.data(), static_cast<int>(meshData_.size() * sizeof(float)));
+
+    meshShaderProgram_.bind();
+    gl->glEnableVertexAttribArray(0);
+    gl->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), nullptr);
+    gl->glEnableVertexAttribArray(1);
+    gl->glVertexAttribPointer(
+        1,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(float),
+        reinterpret_cast<const void *>(3 * sizeof(float)));
+    meshShaderProgram_.release();
+
+    meshVertexBuffer_.release();
+    meshVertexArrayObject_.release();
+    meshDataDirty_ = false;
 }
 
 void PointCloudViewport::drawAxis()

@@ -1,6 +1,7 @@
 #include "model/geometry/BoundingBox3d.h"
 #include "model/geometry/PointCloud.h"
 #include "model/io/PlyPointCloudImporter.h"
+#include "model/preprocessing/DuplicatePointSelection.h"
 #include "model/preprocessing/InvalidPointSelection.h"
 
 #include <filesystem>
@@ -109,6 +110,81 @@ void testSparseSelectionWithInvalidParameters()
         "Empty point clouds should produce an empty selection.");
 }
 
+void testPerfectDuplicateSelection()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 1.0, 1.0);
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 1.0, 1.0);
+    pointCloud.addPoint(1.0, 1.0, 1.0);
+
+    const std::vector<std::size_t> selectedIndices =
+        selectPerfectDuplicatePoints(pointCloud);
+    require(selectedIndices.size() == 3U, "Exact duplicate groups should keep one representative each.");
+    require(selectedIndices[0] == 2U, "The second point in the first exact duplicate group should be selected.");
+    require(selectedIndices[1] == 3U, "The second point in the second exact duplicate group should be selected.");
+    require(selectedIndices[2] == 4U, "Subsequent points in an exact duplicate group should be selected.");
+}
+
+void testPerfectDuplicateSelectionWithNoDuplicates()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 0.0, 0.0);
+    pointCloud.addPoint(0.0, 1.0, 0.0);
+
+    require(
+        selectPerfectDuplicatePoints(pointCloud).empty(),
+        "Point clouds without exact duplicates should produce an empty selection.");
+}
+
+void testNearDuplicateSelection()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(0.05, 0.0, 0.0);
+    pointCloud.addPoint(1.0, 1.0, 1.0);
+    pointCloud.addPoint(1.08, 1.0, 1.0);
+    pointCloud.addPoint(3.0, 3.0, 3.0);
+
+    const std::vector<std::size_t> selectedIndices =
+        selectNearDuplicatePoints(pointCloud, 0.1);
+    require(selectedIndices.size() == 2U, "Near duplicates within the threshold should select redundant points.");
+    require(selectedIndices[0] == 1U, "The second point in the first near-duplicate group should be selected.");
+    require(selectedIndices[1] == 3U, "The second point in the second near-duplicate group should be selected.");
+}
+
+void testNearDuplicateSelectionWithThresholdSeparation()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+    pointCloud.addPoint(0.2, 0.0, 0.0);
+    pointCloud.addPoint(0.41, 0.0, 0.0);
+
+    const std::vector<std::size_t> selectedIndices =
+        selectNearDuplicatePoints(pointCloud, 0.1);
+    require(
+        selectedIndices.empty(),
+        "Points farther than the threshold should not be selected as near duplicates.");
+}
+
+void testNearDuplicateSelectionWithInvalidParameters()
+{
+    PointCloud pointCloud;
+    pointCloud.addPoint(0.0, 0.0, 0.0);
+
+    require(
+        selectNearDuplicatePoints(PointCloud{}, 0.1).empty(),
+        "Empty point clouds should produce an empty near-duplicate selection.");
+    require(
+        selectNearDuplicatePoints(pointCloud, 0.0).empty(),
+        "Zero distance threshold should be handled safely.");
+    require(
+        selectNearDuplicatePoints(pointCloud, -1.0).empty(),
+        "Negative distance threshold should be handled safely.");
+}
+
 void testRemovePointIndices()
 {
     PointCloud pointCloud;
@@ -148,6 +224,11 @@ int main()
         testBoundingBox();
         testSparseSelection();
         testSparseSelectionWithInvalidParameters();
+        testPerfectDuplicateSelection();
+        testPerfectDuplicateSelectionWithNoDuplicates();
+        testNearDuplicateSelection();
+        testNearDuplicateSelectionWithThresholdSeparation();
+        testNearDuplicateSelectionWithInvalidParameters();
         testRemovePointIndices();
         testPointCloudSnapshotRestore();
     } catch (const std::exception &exception) {

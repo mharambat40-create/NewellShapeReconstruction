@@ -11,12 +11,13 @@ Currently integrated:
 - CMake
 - C++20 through the root build configuration
 - Eigen through the `NewellCore` target configuration
+- optional CGAL feature detection through `NEWELL_ENABLE_CGAL`
 
 Not yet integrated:
 
 - OpenMesh
 - libigl
-- CGAL
+- a screened octree Poisson backend
 - PCL
 - OCCT
 
@@ -33,7 +34,7 @@ It currently:
 - builds the application from `src/app` and `src/view`;
 - builds a Qt-free `NewellCore` library for model and controller code;
 - links Qt OpenGL modules for the point-cloud viewport;
-- adds a small `NewellTests` executable.
+- adds model/import, preprocessing, reconstruction and normal-processing test executables.
 
 ## Primary technologies
 
@@ -80,6 +81,8 @@ Role:
 
 - Linear algebra
 - PCA
+- symmetric covariance eigendecomposition for local normal estimation
+- SVD least-squares fitting for quadratic local surfaces
 - Least-squares fitting
 - Numerical support for geometry processing
 
@@ -87,6 +90,11 @@ Current status:
 
 - Required by the first import-oriented slice
 - Linked through `Eigen3::Eigen`
+- Used by the four point-cloud estimators exposed in the Normal Selection workflow
+
+The normal-processing slice adds no third-party dependency. Spatial queries
+reuse Newell's existing KD-tree. Reserved orientation and field-derived
+extension points also rely only on Eigen and standard-library containers.
 
 ## Candidate future geometry libraries
 
@@ -111,6 +119,30 @@ Useful for:
 
 - Robust computational geometry
 - Exact predicates or specialised geometric algorithms
+
+Current status:
+
+- optional and detected in the current macOS/Homebrew development environment;
+- detected with `find_package(CGAL CONFIG QUIET)` when `NEWELL_ENABLE_CGAL=ON`;
+- enables Delaunay and Alpha Shapes reconstruction in 2D and 2.5D modes;
+- unavailable methods remain disabled with an installation/configuration reason when CGAL is absent.
+
+On macOS, install the optional backend with:
+
+```bash
+brew install cgal
+```
+
+### Screened Poisson
+
+`NEWELL_ENABLE_POISSON` reserves the build boundary for a future screened octree implementation. It is off by default, and enabling it currently produces a clear configure-time error because no credible provider is configured. The project does not substitute RBF, voxel reconstruction or ordinary Poisson reconstruction for Screened Poisson.
+
+### Reconstruction resource limits
+
+- `ScalarGrid3D` validates dimensions, multiplication overflow and a configurable maximum voxel count before allocation.
+- Voxel reconstruction defaults to a 16-million-voxel ceiling.
+- RBF reconstruction limits control points to 512, defaults to 128, limits sampled voxels and caps total field evaluations.
+- Delaunay/Alpha memory is owned inside the optional CGAL adapter; Greedy Projection reuses the shared KD-tree and bounds each neighbourhood.
 
 ### PCL
 

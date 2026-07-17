@@ -38,13 +38,21 @@ public:
     [[nodiscard]] SparseSelectionResult selectSparseCurrentPoints(
         double radiusMax,
         int minimumNeighbourCount) const;
+    [[nodiscard]] SparseSelectionResult selectPerfectDuplicateCurrentPoints() const;
+    [[nodiscard]] SparseSelectionResult selectNearDuplicateCurrentPoints(
+        double distanceThreshold) const;
     [[nodiscard]] RemovePointResult removeCurrentPointIndices(
         const std::vector<std::size_t> &selectedIndices);
     void restoreCurrentPointCloud(const PointCloud &pointCloud);
+    void setTemporaryReconstructedMesh(TriangleMesh mesh);
+    [[nodiscard]] bool commitTemporaryReconstructedMesh();
+    void discardTemporaryReconstructedMesh();
     [[nodiscard]] bool hasGeometryLoaded() const;
     [[nodiscard]] std::size_t currentPointCount() const;
     [[nodiscard]] std::size_t geometryRevision() const;
     [[nodiscard]] const PointCloud *currentPointCloud() const;
+    [[nodiscard]] bool hasTemporaryReconstructedMesh() const;
+    [[nodiscard]] const TriangleMesh *displayedReconstructedMesh() const;
     [[nodiscard]] const GeometryDocument &document() const;
 
 private:
