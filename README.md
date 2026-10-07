@@ -1,4 +1,4 @@
-# Newell
+# NewellShapeReconstruction
 
 Newell is a Qt/C++20 desktop research prototype for shape improvement using surface smoothing. The project is being organised as a modular engineering application that will import scanned or CAD-like geometry, visualise it, apply smoothing workflows, compare results against the original geometry, fit parametric surfaces to selected regions, and later export CAD-compatible results.
 
